@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Disposables;
 using System.Reflection.Metadata;
 using System.Reactive.Linq;
 
@@ -14,9 +15,13 @@ internal static class Program
 
 internal static class HotReloadManager
 {
+    static CompositeDisposable disposables = new();
+    
     public static void ClearCache(Type[]? types)
     {
         Console.WriteLine("ClearCache");
+        disposables.Dispose();
+        disposables = new CompositeDisposable();
     }
 
     public static void UpdateApplication(Type[]? types)
@@ -24,20 +29,20 @@ internal static class HotReloadManager
         // Re-render the list of properties
         Console.WriteLine("UpdateApplication");
         //@@bp
-        Observable
-            .Range(start: 0, count: 20)
-            .Scan((x, y) => x+y)
-            .Subscribe(
-                onNext: Console.WriteLine);
+        // disposables.Add(
+        //     Observable
+        //         .Interval(TimeSpan.FromMilliseconds(1500))
+        //         .Scan((x, y) => x+y)
+        //         .Subscribe(
+        //             onNext: Console.WriteLine));
 
-        
         Observable
             .Defer(
                 () =>
                 {
                     var meh = new Meh
                     {
-                        BoilerPlateProperty = "meh"
+                        BoilerPlateProperty = "original value"
                     };
                     return Observable.Return(meh);
                 })
@@ -49,17 +54,19 @@ internal static class HotReloadManager
                     return (meh, meh2);
                 })
             .Do(t => Console.WriteLine(t))
+            .Select(
+                _ => new Meh { BoilerPlateProperty = "blah", BoilerPlateProperty2 = ""})
             .Subscribe();
     }
 
     record Meh
     {
-        public string BoilerPlateProperty { init; get; }
+        public string? BoilerPlateProperty { init; get; }
         public string BoilerPlateProperty2 { init; get; }
 
         public override string ToString()
         {
-            return $"{BoilerPlateProperty}, {BoilerPlateProperty2}";
+            return $"{this.BoilerPlateProperty}, {this.BoilerPlateProperty2}";
         }
     }
 }
